@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>js导入excel</title>
+
+		<style>
+
+			.btn {
+				width: 64px;
+				height: 32px;
+				text-align: center;
+				font-size:14px;
+				line-height: 32px;
+				background-color: #1890ff;
+				color: #fff;
+				display: block;
+				position: absolute;
+				top: 5%;
+				right: 5%;
+				text-decoration: none;
+				cursor: pointer;
+			}
+			.file span{ margin: 0 3px; color: blue;}
+			
+			.data-view {
+				width: 100%;
+				padding-top: 24px;
+			}
+			.data-view p {
+				height: 24px;
+				line-height: 24px;
+				font-size: 16px;
+				color: #333;
+				margin-bottom: 10px;
+				margin-top: 0;
+			}
+			.data-view span {
+				height: 24px;
+				line-height: 24px;
+				vertical-align: top;
+				margin-right: 4px;
+			}
+			.data-view p span.num {
+				margin: 0 4px;
+				padding: 0;
+			}
+			ul, li {
+				margin: 0;
+				padding: 0;
+				padding-inline-start: 0;
+			}
+			ul {
+				margin-top: -10px;
+			}
+			ul li span {
+				margin-left: 12px;
+			}
+			ul li span:first-child {
+				width: 220px;
+				display: inline-block;
+				vertical-align: top;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				overflow: hidden;
+			}
+			.type span {
+				margin-left: 12px;
+				margin-right: 4px;
+			}
+
+		</style>
+</head>
+
+<body>
+
+	<input type="file" onchange="importf(this)" />
+
+	<p class="file" id="file">目前的文件：</p>
+
+	<div id="excelContent"></div>
+
+	<a href="javascript:;" class="btn" onclick="btn_export()">导出</a>
+
+
+	<table id="table1" border="1" cellspacing="0" cellpadding="0" style="display: none;" >
+		<thead>
+				<tr>
+						<td>序号</td>
+						<td>姓名</td>
+						<td>年龄</td>
+						<td>兴趣</td>
+				</tr>
+		</thead>
+		<tbody>
+				<tr>
+						<td>1</td>
+						<td>张三</td>
+						<td>18</td>
+						<td>打游戏</td>
+				</tr>
+				<tr>
+						<td>2</td>
+						<td>李四</td>
+						<td>88</td>
+						<td>看电影</td>
+				</tr>
+				<tr>
+						<td>3</td>
+						<td>王五</td>
+						<td>81</td>
+						<td>睡觉</td>
+				</tr>
+		</tbody>
+</table>
+
+	<!-- <div class="data-view">
+		<p><span>工单类型AlipayHk总量：</span>200</p>
+		<p>工单子类型如下：</p>
+		<ul>
+			<li><span>XXXX:</span><span>数量：</span>200<span>占比：</span>10.55%</li>
+		</ul>
+	</div> -->
+
+	<script src="xlsx.js"></script>
+	<script src="export.js"></script>
+
+	<script>
+		/**
+		 * FileReader共有4种读取方法：
+		 * 1.readAsArrayBuffer(file)：将文件读取为ArrayBuffer。
+		 * 2.readAsBinaryString(file)：将文件读取为二进制字符串
+		 * 3.readAsDataURL(file)：将文件读取为Data URL
+		 * 4.readAsText(file, [encoding])：将文件读取为文本，encoding缺省值为'UTF-8'
+		 */
+		var wb;//读取完成的数据
+		var rABS = false; //是否将文件读取为二进制字符
+
+		let alipayData = [];
+
+		let exportData = [];
+		let dataType = [];
+
+		const findArrMore = (arr) => {
+			let dataMap = new Map();
+			let len = arr.length;
+			let twoId = [];
+			for (let i = 0; i < len; i++) {
+				if (!dataMap.has(arr[i])) {
+					dataMap.set(arr[i], true);
+				} else {
+					twoId.push(arr[i]);
+				}
+			}
+			twoId = [...new Set(twoId)];
+			return twoId;
+		}
+
+		let name = '';
+
+		//开始导入
+		function importf(obj) {
+			if(!obj.files) {
+				return;
+			}
+			var f = obj.files[0];
+			var reader = new FileReader();
+			document.getElementById("file").innerHTML = document.getElementById("file").innerHTML + '<span>'+obj.files[0].name+'<span>';
+			
+			name = obj.files[0].name;
+
+			reader.onload = function(e) {
+				var data = e.target.result;
+				if(rABS) {
+					wb = XLSX.read(btoa(fixdata(data)), {//手动转化
+						type: 'base64'
+					});
+				} else {
+					wb = XLSX.read(data, {
+						type: 'binary'
+					});
+				}
+
+				/**
+					* wb.SheetNames[0]是获取Sheets中第一个Sheet的名字
+					* wb.Sheets[Sheet名]获取第一个Sheet的数据
+					*/
+
+					// console.log('wb.SheetNames[0]: ', wb.SheetNames[0])
+					// console.log('wb.SheetNames[1]:DATA: ', wb.Sheets[wb.SheetNames[0]])
+
+					var dataAll = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+					// console.log('dataAll: ' + dataAll.length)
+
+					alipayData = alipayData.concat(dataAll.filter(item => String(item['工单类型']).indexOf('澳门') >= 0));
+
+					// console.log('alipayData: ' + alipayData.length)
+					let len = alipayData.length;
+					dataType = [];
+
+					exportData = [];
+
+					var dataTypeMap = new Map();
+					let dataMonthMap = new Map();
+					let monthArr = [];
+
+					for (let i = 0; i < len; i++) {
+						let key = alipayData[i]['工单子类型'];
+						if (key == '') {
+							key = alipayData[i]['工单类型']
+						}
+						if (dataType.indexOf(key) < 0) {
+							dataType.push(key);
+							dataTypeMap.set(key, {
+								userId: [alipayData[i].user_id],
+								num: 1,
+								doneNum: alipayData[i]['是否完结'] === '完结' ? 1 : 0,
+								resubmitNum: Number(alipayData[i]['是否完结后72小时候内再次提交工单']) === 0 ? 0 : 1,
+							})
+						} else {
+							const sourceData = dataTypeMap.get(key);
+							const doneNum = alipayData[i]['是否完结'] === '完结' ? 1 : 0;
+							const resubmitNum = Number(alipayData[i]['是否完结后72小时候内再次提交工单']) === 0 ? 0 : 1;
+							const userId = [...sourceData.userId, alipayData[i].user_id];
+
+							const data = {
+								userId: userId,
+								num: sourceData.num + 1,
+								doneNum: sourceData.doneNum + doneNum,
+								resubmitNum: sourceData.resubmitNum + resubmitNum,
+							}
+
+							dataTypeMap.set(key, data);
+						}
+
+						let toDate = new Date(String(alipayData[i]['创建时间'] || alipayData[i]['创建时间月']));
+						let date = toDate.getMonth() + 1 + '月';
+
+						if (monthArr.indexOf(date) < 0) {
+							// 2021-01-01 00:01:20
+							let targetData = {};
+							targetData[key] = 1;
+
+							monthArr.push(date);
+							dataMonthMap.set(date, targetData)
+						} else {
+							let targetData = dataMonthMap.get(date);
+							if (targetData[key]) {
+								targetData[key] = targetData[key] + 1;
+							} else {
+								targetData[key] = 1;
+							}
+
+							dataMonthMap.set(date, targetData)
+						}
+					}
+
+					// console.log(dataMonthMap, monthArr)
+
+					// console.log('dataType', dataType)
+					// 处理页面导出月份
+					var table1 = document.querySelector("#table1");
+					let headHtml = 	'<thead>\
+							<tr>\
+									<td>月份</td>';
+					dataType.forEach(item => {
+						headHtml += '<td>'+item+'</td>';
+					})
+					headHtml+='</tr>\
+					</thead>';
+
+					let bodyHtml = '<tbody>'
+					monthArr.forEach(item => {
+						let data = {
+							'月份': item,
+						};
+
+						bodyHtml += '<tr>\
+									<td>'+item+'</td>'
+							dataType.forEach(key => {
+								let num = '';
+								let targetItemData = dataMonthMap.get(item);
+								if (targetItemData[key]) {
+									num = targetItemData[key];
+								}
+								bodyHtml +='<td>'+num+'</td>'
+
+								data[key] = num;
+
+							})
+							bodyHtml += '</tr>'
+							exportData.push(data);
+					});
+
+					bodyHtml += '</tbody>';
+
+					table1.innerHTML = headHtml + bodyHtml;
+
+					// 处理页面表单
+					let html = '';
+					let sumDoneNum = 0;
+					dataType.forEach((item,index) => {
+						const sourceData = dataTypeMap.get(item);
+						const bfb = (sourceData.num / len) * 100;
+						const bfbType = (sourceData.doneNum / sourceData.num) * 100;
+						sumDoneNum += sourceData.doneNum;
+
+						const twoId = findArrMore(sourceData.userId);
+						// console.log('twoId: ', twoId);
+
+						html+='<li><span>'+(String(index + 1) +'-' + item)+':</span><span>数量：</span>'+sourceData.num+'<span>已结单：</span>'+sourceData.doneNum+'<span>未结单：</span>'+(sourceData.num - sourceData.doneNum)+'\
+							<span>-72小时再次提交数量：</span>'+sourceData.resubmitNum+'\
+							<span>多次提交工单用户数量：</span>'+twoId.length+'<span>工单类型占比：</span>'+bfb.toFixed(2)+'%\
+							<span>工单结单率：</span>'+bfbType.toFixed(2)+'%</li>'
+					});
+
+
+					// console.log('sumDoneNum', sumDoneNum)
+
+					const sumBfbType = (sumDoneNum / alipayData.length) * 100;
+
+					// <span>已结单：<span>'+sumDoneNum+'<span>\
+
+					// 未结单：<span>'+alipayData.length - sumDoneNum+'<span>总结单率：<span>'+sumBfbType.toFixed(2)+'%
+
+					document.getElementById("excelContent").innerHTML= '<div class="data-view">\
+					<p><span>工单类型AlipayHk总量：</span>'+alipayData.length+'</p>\
+					<p class="type">工单子类型一共<span class="num">'+dataType.length+'</span>条如下：<span>已结单：</span>'+sumDoneNum+'<span>\
+						未结单：</span>'+(alipayData.length - sumDoneNum)+'<span>总结单率：</span>'+sumBfbType.toFixed(2)+'%</p>\
+					<ul>'+html+'\
+					</ul>\
+				</div>'
+			};
+
+			if(rABS) {
+				reader.readAsArrayBuffer(f);
+			} else {
+				reader.readAsBinaryString(f);
+			}
+		}
+
+		//文件流转BinaryString
+		function fixdata(data) {
+			var o = "",
+					l = 0,
+					w = 10240;
+			for(; l < data.byteLength / w; ++l) o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w, l * w + w)));
+			o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w)));
+			return o;
+		}
+
+		// 导出
+		function btn_export() {
+        // var table1 = document.querySelector("#table1");
+        // var sheet = XLSX.utils.table_to_sheet(table1);//将一个table对象转换成一个sheet对象
+        // openDownloadDialog(sheet2blob(sheet),'下载.xlsx');
+				const wb = XLSX.utils.book_new();
+				let export1Data = copy(exportData);
+
+				// let importKey = [
+				// 	'AlipayHK服务台工单', '解限申请', '密码重置舆情风险', '密码重置',
+				// 	'当面付', '活动风险','注销账户', '认证加急','主站批量小号问题',
+				// ];
+
+				// let otherKey = dataType.filter(item => importKey.indexOf(item) < 0);
+
+				// console.log(importKey, otherKey, dataType)
+
+				// console.log(export2Data)
+
+       let dataMe = [];
+
+				export1Data.forEach(item => {
+					for (var attr in item) {
+						if (dataMe.indexOf(attr) < 0) {
+							dataMe.push(attr)
+						}
+					}
+				})
+
+				// console.log('dataMe', dataMe)
+
+        let resultKey = ['月份', '优惠未享受-线下', '异常问题技术排查', '优惠未享受-线上', '密码重置', '反洗钱审核', '解限申请', '退款未到账', '注销账户', '活动赔付申请', '澳门钱包人工打标', '解绑银行卡', '活动风险', '银行卡被他人绑定', '支付宝澳门回访工单', '反洗钱回呼', '澳本通退款未到账', '优惠未享受-线下(商家)', '其他', '提现', '澳本通支付未到账', '语言回呼（仅限英文）', '证件被占用', '余额不可用排查是否司法冻结', '修改手机号', '支付未到账', '澳门钱包自助问题收集反馈', '手机/密码重置舆情风险', '澳陆汇-汇款失败', '澳陆汇-付款失败', '修改中文姓名', '澳陆通退款未到账', '澳陆汇-退汇未到账', '澳陆汇-汇款处理失败', '外部商户支付未到账', '澳陆通支付未到账', '核实认证失败原因', '修改护照号码', '非会员卡被盗', '会员卡被盗', '修改证件有效期', '商家异常问题排查', '挂失', '活动风险-政府消费券', '澳陆汇-汇款处理中超时', '服务台工单', '修改外文姓名', '外部商户退款未到账', '澳陆汇-汇款异常', '充值未到账', '账户被盗举报']
+
+        let expprtDataL = []
+
+        export1Data.forEach(item => {
+          let data = {}
+          resultKey.forEach((key, index) => {
+            if (!item[key]) {
+              data[key] = '-';
+            } else {
+              data[key] = item[key]
+            }
+          })
+          expprtDataL.push(data);
+        })
+
+				const sheet1 = XLSX.utils.json_to_sheet(expprtDataL);
+  			XLSX.utils.book_append_sheet(wb, sheet1, 'sheet1');
+
+				const workbookBlob = workbook2blob(wb);
+				openDownloadDialog(workbookBlob, name + '-分析.xlsx');
+    }
+
+		 // 将workbook装化成blob对象
+		function workbook2blob(workbook) {
+				// 生成excel的配置项
+				var wopts = {
+						// 要生成的文件类型
+						bookType: "xlsx",
+						// // 是否生成Shared String Table，官方解释是，如果开启生成速度会下降，但在低版本IOS设备上有更好的兼容性
+						bookSST: false,
+						type: "binary"
+				};
+				var wbout = XLSX.write(workbook, wopts);
+				// 将字符串转ArrayBuffer
+				function s2ab(s) {
+						var buf = new ArrayBuffer(s.length);
+						var view = new Uint8Array(buf);
+						for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xff;
+						return buf;
+				}
+				var blob = new Blob([s2ab(wbout)], {
+						type: "application/octet-stream"
+				});
+				return blob;
+		}
+
+		function copy(obj) {
+			let newobj = null     // 接受拷贝的新对象
+			if(typeof(obj) == 'object' && typeof(obj) !== null) {   // 判断是否是引用类型
+				newobj = obj instanceof Array? []: {}               // 判断是数组还是对象
+				for(var i in obj) {
+					newobj[i] = copy(obj[i])                        // 判断下一级是否还是引用类型
+				}
+			} else {
+				newobj = obj
+			}
+			return newobj
+		}
+
+	</script>
+
+</body>
+
+</html>
