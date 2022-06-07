@@ -145,6 +145,8 @@
 		let exportData = [];
 		let dataType = [];
 
+		let MonthDays = new Map();
+
 		const findArrMore = (arr) => {
 			let dataMap = new Map();
 			let len = arr.length;
@@ -241,6 +243,20 @@
 						let toDate = new Date(String(alipayData[i]['创建时间'] || alipayData[i]['创建时间月']));
 						let date = toDate.getMonth() + 1 + '月';
 
+						if (!MonthDays.get(date)) {
+							let dateJson = {
+								start: toDate.getDate(),
+								end: toDate.getDate(),
+							}
+							MonthDays.set(date, dateJson)
+						} else {
+							let dateJson = MonthDays.get(date);
+							MonthDays.set(date, {
+								...dateJson,
+								end: toDate.getDate(),
+							})
+						}
+
 						if (monthArr.indexOf(date) < 0) {
 							// 2021-01-01 00:01:20
 							let targetData = {};
@@ -260,8 +276,8 @@
 						}
 					}
 
-					// console.log(dataMonthMap, monthArr)
-
+					// console.log('MonthDays', MonthDays)
+					// console.log('dataMonthMap', dataMonthMap)
 					// console.log('dataType', dataType)
 					// 处理页面导出月份
 					var table1 = document.querySelector("#table1");
@@ -296,6 +312,8 @@
 							bodyHtml += '</tr>'
 							exportData.push(data);
 					});
+
+					// console.log('exportData', exportData)
 
 					bodyHtml += '</tbody>';
 
@@ -387,7 +405,9 @@
 
         let resultKey = ['月份', '优惠未享受-线下', '异常问题技术排查', '优惠未享受-线上', '密码重置', '反洗钱审核', '解限申请', '退款未到账', '注销账户', '活动赔付申请', '澳门钱包人工打标', '解绑银行卡', '活动风险', '银行卡被他人绑定', '支付宝澳门回访工单', '反洗钱回呼', '澳本通退款未到账', '优惠未享受-线下(商家)', '其他', '提现', '澳本通支付未到账', '语言回呼（仅限英文）', '证件被占用', '余额不可用排查是否司法冻结', '修改手机号', '支付未到账', '澳门钱包自助问题收集反馈', '手机/密码重置舆情风险', '澳陆汇-汇款失败', '澳陆汇-付款失败', '修改中文姓名', '澳陆通退款未到账', '澳陆汇-退汇未到账', '澳陆汇-汇款处理失败', '外部商户支付未到账', '澳陆通支付未到账', '核实认证失败原因', '修改护照号码', '非会员卡被盗', '会员卡被盗', '修改证件有效期', '商家异常问题排查', '挂失', '活动风险-政府消费券', '澳陆汇-汇款处理中超时', '服务台工单', '修改外文姓名', '外部商户退款未到账', '澳陆汇-汇款异常', '充值未到账', '账户被盗举报']
 
-        let expprtDataL = []
+        let expprtDataL = [];
+
+				let expprtDataL2 = [];
 
         export1Data.forEach(item => {
           let data = {}
@@ -401,8 +421,15 @@
           expprtDataL.push(data);
         })
 
+				expprtDataL.forEach(item => {
+					let month = item['月份'];
+					let mm = MonthDays.get(month);
+					item['月份'] = month + ' ' + mm.start + '~' + mm.end
+				})
+
 				const sheet1 = XLSX.utils.json_to_sheet(expprtDataL);
   			XLSX.utils.book_append_sheet(wb, sheet1, 'sheet1');
+
 
 				const workbookBlob = workbook2blob(wb);
 				openDownloadDialog(workbookBlob, name + '-分析.xlsx');
