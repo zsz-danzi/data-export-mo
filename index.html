@@ -118,13 +118,6 @@
 		</tbody>
 </table>
 
-	<!-- <div class="data-view">
-		<p><span>工单类型AlipayHk总量：</span>200</p>
-		<p>工单子类型如下：</p>
-		<ul>
-			<li><span>XXXX:</span><span>数量：</span>200<span>占比：</span>10.55%</li>
-		</ul>
-	</div> -->
 
 	<script src="xlsx.js"></script>
 	<script src="export.js"></script>
@@ -140,12 +133,13 @@
 		var wb;//读取完成的数据
 		var rABS = false; //是否将文件读取为二进制字符
 
-		let alipayData = [];
+		let testData = [];
 
 		let exportData = [];
 		let dataType = [];
 
 		let MonthDays = new Map();
+		let indexOfName = 'A' + 'li' + 'p' + 'ay' + 'HK';
 
 		const findArrMore = (arr) => {
 			let dataMap = new Map();
@@ -199,10 +193,10 @@
 
 					// console.log('dataAll: ' + dataAll.length)
 
-					alipayData = alipayData.concat(dataAll.filter(item => String(item['工单类型']).indexOf('澳门') >= 0));
+					testData = testData.concat(dataAll.filter(item => String(item['工单类型']).indexOf('澳门') >= 0));
 
-					// console.log('alipayData: ' + alipayData.length)
-					let len = alipayData.length;
+					// console.log('testData: ' + testData.length)
+					let len = testData.length;
 					dataType = [];
 
 					exportData = [];
@@ -212,23 +206,23 @@
 					let monthArr = [];
 
 					for (let i = 0; i < len; i++) {
-						let key = alipayData[i]['工单子类型'];
+						let key = testData[i]['工单子类型'];
 						if (key == '') {
-							key = alipayData[i]['工单类型']
+							key = testData[i]['工单类型']
 						}
 						if (dataType.indexOf(key) < 0) {
 							dataType.push(key);
 							dataTypeMap.set(key, {
-								userId: [alipayData[i].user_id],
+								userId: [testData[i].user_id],
 								num: 1,
-								doneNum: alipayData[i]['是否完结'] === '完结' ? 1 : 0,
-								resubmitNum: Number(alipayData[i]['是否完结后72小时候内再次提交工单']) === 0 ? 0 : 1,
+								doneNum: testData[i]['是否完结'] === '完结' ? 1 : 0,
+								resubmitNum: Number(testData[i]['是否完结后72小时候内再次提交工单']) === 0 ? 0 : 1,
 							})
 						} else {
 							const sourceData = dataTypeMap.get(key);
-							const doneNum = alipayData[i]['是否完结'] === '完结' ? 1 : 0;
-							const resubmitNum = Number(alipayData[i]['是否完结后72小时候内再次提交工单']) === 0 ? 0 : 1;
-							const userId = [...sourceData.userId, alipayData[i].user_id];
+							const doneNum = testData[i]['是否完结'] === '完结' ? 1 : 0;
+							const resubmitNum = Number(testData[i]['是否完结后72小时候内再次提交工单']) === 0 ? 0 : 1;
+							const userId = [...sourceData.userId, testData[i].user_id];
 
 							const data = {
 								userId: userId,
@@ -240,7 +234,7 @@
 							dataTypeMap.set(key, data);
 						}
 
-						let toDate = new Date(String(alipayData[i]['创建时间'] || alipayData[i]['创建时间月']));
+						let toDate = new Date(String(testData[i]['创建时间'] || testData[i]['创建时间月']));
 						let date = toDate.getMonth() + 1 + '月';
 
 						if (!MonthDays.get(date)) {
@@ -340,16 +334,16 @@
 
 					// console.log('sumDoneNum', sumDoneNum)
 
-					const sumBfbType = (sumDoneNum / alipayData.length) * 100;
+					const sumBfbType = (sumDoneNum / testData.length) * 100;
 
 					// <span>已结单：<span>'+sumDoneNum+'<span>\
 
-					// 未结单：<span>'+alipayData.length - sumDoneNum+'<span>总结单率：<span>'+sumBfbType.toFixed(2)+'%
+					// 未结单：<span>'+testData.length - sumDoneNum+'<span>总结单率：<span>'+sumBfbType.toFixed(2)+'%
 
 					document.getElementById("excelContent").innerHTML= '<div class="data-view">\
-					<p><span>工单类型AlipayHk总量：</span>'+alipayData.length+'</p>\
+					<p><span>工单类型'+indexOfName+'总量：</span>'+testData.length+'</p>\
 					<p class="type">工单子类型一共<span class="num">'+dataType.length+'</span>条如下：<span>已结单：</span>'+sumDoneNum+'<span>\
-						未结单：</span>'+(alipayData.length - sumDoneNum)+'<span>总结单率：</span>'+sumBfbType.toFixed(2)+'%</p>\
+						未结单：</span>'+(testData.length - sumDoneNum)+'<span>总结单率：</span>'+sumBfbType.toFixed(2)+'%</p>\
 					<ul>'+html+'\
 					</ul>\
 				</div>'
@@ -380,11 +374,7 @@
 				const wb = XLSX.utils.book_new();
 				let export1Data = copy(exportData);
 
-				// let importKey = [
-				// 	'AlipayHK服务台工单', '解限申请', '密码重置舆情风险', '密码重置',
-				// 	'当面付', '活动风险','注销账户', '认证加急','主站批量小号问题',
-				// ];
-
+	
 				// let otherKey = dataType.filter(item => importKey.indexOf(item) < 0);
 
 				// console.log(importKey, otherKey, dataType)
